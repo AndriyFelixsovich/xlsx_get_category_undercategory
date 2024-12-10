@@ -1,0 +1,71 @@
+$query = $this->db->query("SELECT category_id, name_ua FROM " . DB_PREFIX . "allegro_category WHERE parent_id = 7 AND status = 1");
+
+
+            $filename = 'D:\star-avto-category_product.xlsx';
+
+            $uniquePaths = [];
+            $uniquePaths2 = [];
+            $uniquePaths3 = [];
+            $file = fopen($filename, 'w');
+
+        if ($file) {
+            // Додати заголовок файлу
+            fwrite($file, "ID ; Path" . PHP_EOL);
+
+            foreach ($query->rows as $row) {
+                $categoryId = $row['category_id'];
+                $nameUa = $row['name_ua'];
+
+                // Записуємо базову категорію
+                fwrite($file, $categoryId . " ; " . $nameUa . PHP_EOL);
+
+                // Отримуємо вкладені категорії
+                $nestedQuery = $this->db->query("SELECT category_id, name_ua FROM " . DB_PREFIX . "allegro_category WHERE parent_id = $categoryId AND status = 1");
+
+                foreach ($nestedQuery->rows as $nestedRow) {
+                    $nextCategoryId = $nestedRow['category_id'];
+                    $nextCategoryNameUa = $nestedRow['name_ua'];
+
+                    // Формуємо шлях для вкладеної категорії
+                    $nestedPath =  " ; " . $nextCategoryId . " ; " . $nextCategoryNameUa;
+
+                    // Записуємо вкладену категорію у файл
+                    fwrite($file, " ; " . $nestedPath . PHP_EOL);
+
+                    // Перевіряємо ще глибші категорії
+                    $nextPrevCategory = $this->db->query("SELECT category_id, name_ua FROM " . DB_PREFIX . "allegro_category WHERE parent_id = $nextCategoryId AND status = 1");
+
+                    if ($nextPrevCategory->num_rows > 0) {
+                        foreach ($nextPrevCategory->rows as $nestedPrevRow) {
+                            $deeperCategoryId = $nestedPrevRow['category_id'];
+                            $deeperCategoryNameUa = $nestedPrevRow['name_ua'];
+
+                            // Формуємо шлях для глибшої категорії
+                            $deeperPath = " ; " . " ; " . $deeperCategoryId . " ; " . $deeperCategoryNameUa;
+
+                            // Записуємо глибшу категорію у файл
+                            fwrite($file, " ; ; " . $deeperPath . PHP_EOL);
+
+                            $nextPrevPrevCategory = $this->db->query("SELECT category_id, name_ua FROM " . DB_PREFIX . "allegro_category WHERE parent_id = $deeperCategoryId AND status = 1");
+                            if ($nextPrevPrevCategory->num_rows > 0) {
+                                foreach ($nextPrevPrevCategory->rows as $nestedPrevPrevRow) {
+                                    $deeperPrevPrevCategoryId = $nestedPrevPrevRow['category_id'];
+                                    $deeperPrevPrevCategoryNameUa = $nestedPrevPrevRow['name_ua'];
+
+                                    //  для дуже глибшо категорі
+                                    $deeperPrevPrevPath = " ; ; ; " . $deeperPrevPrevCategoryId . " ; " . $deeperPrevPrevCategoryNameUa;
+
+                                    // Записуємо дуже глибшу категорію у файл
+                                    fwrite($file, " ; ; ; ; " . $deeperPrevPrevPath . PHP_EOL);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+                fclose($file);
+
+                echo 'Results have been saved to ' . $filename;
+            } else {
+                echo 'Error opening file';
+            }
